@@ -847,6 +847,10 @@ class KafkaApis(val requestChannel: RequestChannel,
               new ListOffsetResponse.PartitionData(Errors.NONE, ListOffsetResponse.UNKNOWN_TIMESTAMP,
                 ListOffsetResponse.UNKNOWN_OFFSET, Optional.empty())
           }
+          if (topicPartition.partition() == 1) {
+            Thread.sleep(500)
+            println("returning for " + topicPartition + ": " + response.offset)
+          }
           (topicPartition, response)
         } catch {
           // NOTE: These exceptions are special cased since these error messages are typically transient or the client

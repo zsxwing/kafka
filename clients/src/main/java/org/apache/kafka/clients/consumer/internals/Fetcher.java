@@ -188,6 +188,10 @@ public class Fetcher<K, V> implements SubscriptionState.Listener, Closeable {
             this.timestamp = timestamp;
             this.leaderEpoch = leaderEpoch;
         }
+
+        public String toString() {
+            return "offset: " + offset;
+        }
     }
 
     /**
@@ -581,12 +585,30 @@ public class Fetcher<K, V> implements SubscriptionState.Listener, Closeable {
         } else if (!requestedResetTimestamp.equals(offsetResetStrategyTimestamp(partition))) {
             log.debug("Skipping reset of partition {} since an alternative reset has been requested", partition);
         } else {
+            System.out.println("Moving " + partition + " to: " + offsetData);
+            if (partition.partition() == 1) {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (offsetData.offset > 0) {
+                    // Make sure `position` returns before we change the offset to 10.
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
             log.info("Resetting offset for partition {} to offset {}.", partition, offsetData.offset);
             subscriptions.seek(partition, offsetData.offset);
+            System.out.println("Moved " + partition + " to: " + offsetData);
         }
     }
 
     private void resetOffsetsAsync(Map<TopicPartition, Long> partitionResetTimestamps) {
+        System.out.println("resetOffsetsAsync: " + partitionResetTimestamps);
         // Add the topics to the metadata to do a single metadata fetch.
         for (TopicPartition tp : partitionResetTimestamps.keySet())
             metadata.add(tp.topic());
@@ -602,6 +624,7 @@ public class Fetcher<K, V> implements SubscriptionState.Listener, Closeable {
             future.addListener(new RequestFutureListener<ListOffsetResult>() {
                 @Override
                 public void onSuccess(ListOffsetResult result) {
+                    System.out.println("ListOffsetResult: " + result.fetchedOffsets);
                     if (!result.partitionsToRetry.isEmpty()) {
                         subscriptions.resetFailed(result.partitionsToRetry, time.milliseconds() + retryBackoffMs);
                         metadata.requestUpdate();

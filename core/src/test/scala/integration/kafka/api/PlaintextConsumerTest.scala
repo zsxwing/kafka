@@ -42,6 +42,36 @@ import kafka.server.KafkaServer
 class PlaintextConsumerTest extends BaseConsumerTest {
 
   @Test
+  def repo(): Unit = {
+    val producer = createProducer()
+    for (_ <- 0 until 10) {
+      val record =
+        new ProducerRecord(tp.topic, tp.partition, null, "key".getBytes, "value".getBytes)
+      producer.send(record)
+    }
+    for (_ <- 0 until 10) {
+      val record =
+        new ProducerRecord(tp2.topic, tp2.partition, null, "key".getBytes, "value".getBytes)
+      producer.send(record)
+    }
+    producer.flush()
+    producer.close()
+    // The offset of each partition should be 10
+    val consumer = createConsumer()
+    consumer.subscribe(List(tp.topic()).asJava)
+    consumer.poll(0)
+    consumer.seekToEnd(List(tp, tp2).asJava)
+    val offset1 = consumer.position(tp)
+    val offset2 = consumer.position(tp2)
+    println(tp + ": " + offset1)
+    println(tp2 + ": " + offset2)
+    assert(offset1 === 10)
+    // This would fail because the "earliest" reset response triggered by `poll(0)` set it to 0.
+    assert(offset2 === 10)
+    consumer.close()
+  }
+
+  @Test
   def testHeaders() {
     val numRecords = 1
     val record = new ProducerRecord(tp.topic, tp.partition, null, "key".getBytes, "value".getBytes)

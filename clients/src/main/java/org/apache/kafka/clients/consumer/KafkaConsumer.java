@@ -1554,6 +1554,12 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      */
     @Override
     public void seekToEnd(Collection<TopicPartition> partitions) {
+        try {
+            Thread.sleep(2000);
+            System.out.println("start to reset");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         if (partitions == null)
             throw new IllegalArgumentException("Partitions collection cannot be null");
 
@@ -1629,7 +1635,14 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
         try {
             if (!this.subscriptions.isAssigned(partition))
                 throw new IllegalStateException("You can only check the position for partitions assigned to this consumer.");
-
+            if (partition.partition() == 1) {
+                // Wait to make sure the background offset request for earliest has finished and `offset` is not null.
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             Timer timer = time.timer(timeout);
             do {
                 Long offset = this.subscriptions.position(partition);
